@@ -5,7 +5,7 @@ module DataMapper
         order_by = query.order
 
         conditions_statement, bind_values = conditions_statement(query.conditions, query.links.any?)
-        sql_bind_values = query.sql_bind_values || []
+        sql_parts, sql_bind_values = query.sql
 
         statement = [
           select_columns_fragment(query),
@@ -23,7 +23,7 @@ module DataMapper
       end
 
       def select_columns_fragment(query)
-        sql_parts = query.sql_parts || {}
+        sql_parts, sql_bind_values = query.sql
         if sql_parts[:select]
           sql_parts[:select].strip
         else
@@ -32,7 +32,7 @@ module DataMapper
       end
 
       def select_from_fragment(query)
-        sql_parts = query.sql_parts || {}
+        sql_parts, sql_bind_values = query.sql
         if sql_parts[:from]
           sql_parts[:from].strip
         else
@@ -47,7 +47,7 @@ module DataMapper
       end
 
       def select_where_fragment(query)
-        sql_parts = query.sql_parts || {}
+        sql_parts, sql_bind_values = query.sql
         conditions_statement, bind_values = conditions_statement(query.conditions, query.links.any?)
         if sql_parts[:where]
           sql_parts[:where].strip
@@ -57,7 +57,7 @@ module DataMapper
       end
 
       def select_group_fragment(query)
-        sql_parts = query.sql_parts || {}
+        sql_parts, sql_bind_values = query.sql
         group_by = if query.unique?
           query.fields.select { |property| property.kind_of?(Property) }
         end
