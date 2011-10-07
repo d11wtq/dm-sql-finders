@@ -55,6 +55,9 @@ User.never_posted.each do |user|
 end
 ```
 
+The first block argument is always the current Model.  You can optionally pass additional models to `#by_sql` and have
+them yielded into the block if you need to join.
+
 You may chain regular DataMapper finders onto the result (the original SQL is modified with the additions):
 
 ``` ruby
