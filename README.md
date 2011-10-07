@@ -61,7 +61,7 @@ them yielded into the block if you need to join.
 You may chain regular DataMapper finders onto the result (the original SQL is modified with the additions):
 
 ``` ruby
-Users.never_posted.all(:username.like => "%bob%")
+User.never_posted.all(:username.like => "%bob%")
 ```
 
 ## Installation
@@ -80,7 +80,7 @@ dm-aggregates and dm-pager) still function without caring that raw SQL is being 
 
 Before I started writing this, I wanted to implement something similar to Doctrine's (PHP) DQL, probably called DMQL.
 This is basically a strict superset of SQL that is pre-processed with DataMapper, having knowledge of your schema,
-therefore allowing you to simplify the query and let DMSQL hande things like JOIN logic.  Say, for example:
+therefore allowing you to simplify the query and let DMQL hande things like JOIN logic.  Say, for example:
 
 ``` ruby
 Post.by_dmql("JOIN User u WHERE u.username = ?", "Bob")
