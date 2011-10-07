@@ -3,6 +3,7 @@ class User
 
   property :id,       Serial
   property :username, String
+  property :role,     String
 
   has n, :posts
 end

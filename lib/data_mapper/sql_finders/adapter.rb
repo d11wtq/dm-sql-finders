@@ -1,73 +1,76 @@
 module DataMapper
   module SQLFinders
-    class ::DataMapper::Adapters::DataObjectsAdapter
-      def select_statement(query)
-        order_by = query.order
+    class SQLBuilder
+      def initialize(adapter, query)
+        @adapter                      = adapter
+        @query                        = query
+        @model                        = @query.model
+        @parts, @sql_values           = @query.sql
+        @fields                       = @query.fields
+        @conditions                   = @query.conditions
+        @qualify                      = @query.links.any? || !@parts[:from].nil?
+        @conditions_stmt, @qry_values = @adapter.send(:conditions_statement, @conditions, @qualify)
+        @bind_values                  = @sql_values + @qry_values
+        @group_by = if @query.unique?
+          @fields.select { |property| property.kind_of?(Property) }
+        end
+      end
 
-        conditions_statement, bind_values = conditions_statement(query.conditions, query.links.any?)
-        sql_parts, sql_bind_values = query.sql
-
+      def select_statement
         statement = [
-          select_columns_fragment(query),
-          select_from_fragment(query),
-          select_join_fragment(query),
-          select_where_fragment(query),
-          select_group_fragment(query)
+          columns_fragment,
+          from_fragment,
+          join_fragment,
+          where_fragment,
+          group_fragment
         ].compact.join(" ")
 
-#        statement << " ORDER BY #{order_statement(order_by, qualify)}"   if order_by && order_by.any?
-
-#        add_limit_offset!(statement, query.limit, query.offset, bind_values)
-
-        return statement, sql_bind_values + bind_values
+        return statement, @bind_values
       end
 
-      def select_columns_fragment(query)
-        sql_parts, sql_bind_values = query.sql
-        if sql_parts[:select]
-          sql_parts[:select].strip
+      private
+
+      def columns_fragment
+        if @parts[:select]
+          @parts[:select].strip
         else
-          "SELECT #{columns_statement(query.fields, query.links.any?)}"
+          "SELECT #{@adapter.send(:columns_statement, @fields, @qualify)}"
         end
       end
 
-      def select_from_fragment(query)
-        sql_parts, sql_bind_values = query.sql
-        if sql_parts[:from]
-          sql_parts[:from].strip
+      def from_fragment
+        if @parts[:from]
+          @parts[:from].strip
         else
-          "FROM #{quote_name(query.model.storage_name(name))}"
+          "FROM #{@adapter.send(:quote_name, @model.storage_name(@adapter.name))}"
         end
       end
 
-      def select_join_fragment(query)
-        qualify = query.links.any?
-        conditions_statement, bind_values = conditions_statement(query.conditions, qualify)
-        join_statement(query, bind_values, qualify) if qualify
+      def join_fragment
+        @adapter.send(:join_statement, @query, @bind_values, @qualify) if @query.links.any?
       end
 
-      def select_where_fragment(query)
-        sql_parts, sql_bind_values = query.sql
-        conditions_statement, bind_values = conditions_statement(query.conditions, query.links.any?)
-        if sql_parts[:where]
-          sql_parts[:where].strip
+      def where_fragment
+        if @parts[:where]
+          [@parts[:where].strip, @conditions_stmt].reject{ |c| DataMapper::Ext.blank?(c) }.join(" AND ")
         else
-          "WHERE #{conditions_statement}" unless DataMapper::Ext.blank?(conditions_statement)
+          "WHERE #{@conditions_stmt}" unless DataMapper::Ext.blank?(@conditions_stmt)
         end
       end
 
-      def select_group_fragment(query)
-        sql_parts, sql_bind_values = query.sql
-        group_by = if query.unique?
-          query.fields.select { |property| property.kind_of?(Property) }
-        end
-
-        if sql_parts[:group_by]
-          sql_parts[:group_by].strip
+      def group_fragment
+        if @parts[:group_by]
+          @parts[:group_by].strip
         else
-          "GROUP BY #{columns_statement(group_by, qualify)}" if group_by && group_by.any?
+          "GROUP BY #{@adapter.send(:columns_statement, @group_by, @qualify)}" if @group_by && @group_by.any?
         end
       end
+    end
+  end
+
+  class Adapters::DataObjectsAdapter
+    def select_statement(query)
+      SQLFinders::SQLBuilder.new(self, query).select_statement
     end
   end
 end

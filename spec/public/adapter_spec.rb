@@ -3,19 +3,19 @@ require "spec_helper"
 describe DataMapper::Adapters::DataObjectsAdapter do
   context "querying by SQL" do
     before(:each) do
-      @bob  = User.create(:username => "Bob")
-      @fred = User.create(:username => "Fred")
+      @bob  = User.create(:username => "Bob",  :role => "Manager")
+      @fred = User.create(:username => "Fred", :role => "Tea Boy")
     end
 
     context "with a basic SELECT statement" do
       before(:each) do
-        @users = User.by_sql { |u| ["SELECT #{u.*} FROM #{u} WHERE #{u.id} = ?", @bob.id] }
+        @users = User.by_sql { |u| ["SELECT #{u.*} FROM #{u} WHERE #{u.role} = ?", "Manager"] }
         @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
       end
 
       it "executes the original query" do
-        @sql.should == %q{SELECT "users"."id", "users"."username" FROM "users" WHERE "users"."id" = ?}
-        @bind_values.should == [@bob.id]
+        @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" WHERE "users"."role" = ?}
+        @bind_values.should == ["Manager"]
       end
 
       it "finds the matching resources" do
@@ -28,8 +28,23 @@ describe DataMapper::Adapters::DataObjectsAdapter do
 
       describe "chaining" do
         describe "to #all" do
+          before(:each) do
+            @jim   = User.create(:username => "Jim", :role => "Manager")
+            @users = @users.all(:username => "Jim")
+            @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+          end
+
           it "merges the conditions with the original SQL" do
-            pending
+            @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" WHERE "users"."role" = ? AND "users"."username" = ?}
+            @bind_values.should == ["Manager", "Jim"]
+          end
+
+          it "finds the matching resources" do
+            @users.should include(@jim)
+          end
+
+          it "does not find incorrect resources" do
+            @users.should_not include(@bob)
           end
         end
       end
