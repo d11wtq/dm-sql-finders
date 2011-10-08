@@ -72,7 +72,7 @@ still some big problems to solve and lots of specs to write.
 
 ## Detailed Usage
 
-Note the in the following examples, you are not forced to use the table representations yielded into the block, but you
+Note that in the following examples, you are not forced to use the table representations yielded into the block, but you
 are encouraged to.  They respond to the following methods:
 
   - `tbl.*`: expands the splat to only the known fields defined in your model. Other fields in the database are excluded.
