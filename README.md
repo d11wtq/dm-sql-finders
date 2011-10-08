@@ -99,7 +99,7 @@ The block may return an Array, with the first element as the SQL and the followi
 
 ``` ruby
 def self.created_after(time)
-  by_sql { |m| ["SELECT #{m.*} FROM #{m} WHERE #{m.created_at > ?}", time] }
+  by_sql { |m| ["SELECT #{m.*} FROM #{m} WHERE #{m.created_at} > ?", time] }
 end
 ```
 
