@@ -50,25 +50,48 @@ describe DataMapper::Adapters::DataObjectsAdapter do
       end
     end
 
-    context "with an ORDER BY clause" do
-      before(:each) do
-        @users = User.by_sql { |u| "SELECT #{u.*} FROM #{u} ORDER BY #{u.username} DESC" }
-        @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+    describe "ordering" do
+      context "with an ORDER BY clause" do
+        before(:each) do
+          @users = User.by_sql { |u| "SELECT #{u.*} FROM #{u} ORDER BY #{u.username} DESC" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "uses the order from the SQL" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."username" DESC}
+        end
+
+        it "loads the resources in the correct order" do
+          @users.to_a.first.should == @fred
+          @users.to_a.last.should == @bob
+        end
       end
 
-      it "uses the order from the SQL" do
-        @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."username" DESC}
-      end
-    end
+      context "with :order specified on the query" do
+        before(:each) do
+          @users = User.by_sql(:order => [:role.asc]) { |u| "SELECT #{u.*} FROM #{u}" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
 
-    context "with :order specified in the query" do
-      before(:each) do
-        @users = User.by_sql(:order => [:role.desc]) { |u| "SELECT #{u.*} FROM #{u}" }
-        @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        it "uses the order from the options" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."role"}
+        end
+
+        it "loads the resources in the correct order" do
+          @users.to_a.first.should == @bob
+          @users.to_a.last.should == @fred
+        end
       end
 
-      it "uses the order from the options" do
-        @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."role" DESC}
+      context "with both :order and an ORDER BY clause" do
+        before(:each) do
+          @users = User.by_sql(:order => [:role.desc]) { |u| "SELECT #{u.*} FROM #{u} ORDER BY #{u.username} ASC" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "gives the :order option precendence" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."role" DESC}
+        end
       end
     end
 
