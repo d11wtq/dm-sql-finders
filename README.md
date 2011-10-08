@@ -70,6 +70,105 @@ As of now, the gem is under development (started 7th October 2011).  I anticipat
 a week or so.  It is a very simple concept, adding some decorations to `Query` and `DataObjectsAdapter`, but there are
 still some big problems to solve and lots of specs to write.
 
+## Detailed Usage
+
+Note the in the following examples, you are not forced to use the table representations yielded into the block, but you
+are encouraged to.  They respond to the following methods:
+
+  - `tbl.*`: expands the splat to only the known fields defined in your model. Other fields in the database are excluded.
+  - `tbl.to_s`: represents the name of the table in the database.  `#to_s` is invoked implcitly in String context. Note
+     that if you join to the same table multiple times, DataMapper SQL Finders will alias them accordingly (TODO).
+  - `tbl.property_name`: represents the field name in the database mapping to `property_name` in your model.
+
+Writing the field/table names directly, while it will work, is not advised, since it will significantly hamper any future
+efforts to chain onto the query (and it reads just like SQL, right?).
+
+### Basic SELECT statements
+
+Returning a String from the block executes the SQL when a kicker is invoked (e.g. iterating the Collection).
+
+``` ruby
+def self.basically_everything
+  by_sql { |m| "SELECT #{m.*} FROM #{m}" }
+end
+```
+
+### Passing in variables
+
+The block may return an Array, with the first element as the SQL and the following elements as the bind values.
+
+``` ruby
+def self.created_after(time)
+  by_sql { |m| ["SELECT #{m.*} FROM #{m} WHERE #{m.created_at > ?}", time] }
+end
+```
+
+### Ordering
+
+DataMapper always adds an ORDER BY to your queries if you don't specify one.  DataMapper SQL Finders behaves no differently.
+The default ordering is always ascending by primary key.  You can override it in the SQL:
+
+``` ruby
+def self.backwards
+  by_sql { |m| "SELECT #{m.*} FROM #{m} ORDER BY #{m.id} DESC" }
+end
+```
+
+Or you can provide it as a regular option to `#by_sql`, just like you can with `#all`:
+
+``` ruby
+def self.backwards
+  by_sql(:order => [:id.desc]) { |m| "SELECT #{m.*} FROM #{m}" }
+end
+```
+
+Note that the `:order` option take precendence over anything specified in the SQL.  This allows method chains to override it.
+
+### Joins
+
+The additional models are passed to `#by_sql`, then you use them to construct the join.
+
+``` ruby
+class User
+  ... snip ...
+
+  def self.posted_today
+    by_sql(Post) { |u, p| ["SELECT #{u.*} FROM #{u} INNER JOIN #{p} ON #{p.user_id} = #{u.id} WHERE #{p.created_at} > ?", Date.today - 1] }
+  end
+end
+```
+
+The `:links` option will also be interpreted and added to the `FROM` clause in the SQL.  This is useful if you need to override the SQL.
+
+### Limits and offsets
+
+These can be specified in the SQL:
+
+``` ruby
+def self.penultimate_five
+  by_sql { |m| "SELECT #{m.*} FROM #{m} ORDER BY #{m.id} DESC LIMIT 5 OFFSET 5" }
+end
+```
+
+Order they can be provided as options to `#by_sql`:
+
+``` ruby
+def self.penultimate_five
+  by_sql(:limit => 5, :offset => 5) { |m| "SELECT #{m.*} FROM #{m}" }
+end
+```
+
+If `:limit` and/or `:offset` are passed to `#by_sql`, they take precedence over anything written in the SQL itself.
+
+### Method chaining
+
+Method chaining with `#by_sql` works just like with `#all`.  The only (current) exception is that the `#by_sql` call must be the first
+in the chain (I'm not sure how it would look, semantically, if a `#by_sql` call was made anywhere but at the start).
+
+``` ruby
+User.by_sql{ |u| ["SELECT #{u.*} FROM #{u} WHERE #{u.role} = ?", "Manager"] }.all(:username.like => "%bob%", :order => [:username.desc])
+```
+
 ## Contributors
 
 DataMapper SQL Finders is currently written by Chris Corbyn, but I'm extremely open to contributors which can make the
