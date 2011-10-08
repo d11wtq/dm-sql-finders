@@ -10,6 +10,7 @@ module DataMapper
         @conditions                   = @query.conditions
         @qualify                      = @query.links.any? || !@parts[:from].nil?
         @conditions_stmt, @qry_values = @adapter.send(:conditions_statement, @conditions, @qualify)
+        @order_by                     = @query.order
         @bind_values                  = @sql_values + @qry_values
         @group_by = if @query.unique?
           @fields.select { |property| property.kind_of?(Property) }
@@ -22,7 +23,8 @@ module DataMapper
           from_fragment,
           join_fragment,
           where_fragment,
-          group_fragment
+          group_fragment,
+          order_fragment
         ].compact.join(" ")
 
         return statement, @bind_values
@@ -63,6 +65,14 @@ module DataMapper
           @parts[:group_by].strip
         else
           "GROUP BY #{@adapter.send(:columns_statement, @group_by, @qualify)}" if @group_by && @group_by.any?
+        end
+      end
+
+      def order_fragment
+        if @parts[:order_by]
+          @parts[:order_by].strip
+        else
+          "ORDER BY #{@adapter.send(:order_statement, @order_by, @qualify)}" if @order_by && @order_by.any?
         end
       end
     end

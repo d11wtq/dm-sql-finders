@@ -14,7 +14,7 @@ describe DataMapper::Adapters::DataObjectsAdapter do
       end
 
       it "executes the original query" do
-        @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" WHERE "users"."role" = ?}
+        @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" WHERE "users"."role" = ? ORDER BY "users"."id"}
         @bind_values.should == ["Manager"]
       end
 
@@ -35,7 +35,7 @@ describe DataMapper::Adapters::DataObjectsAdapter do
           end
 
           it "merges the conditions with the original SQL" do
-            @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" WHERE "users"."role" = ? AND "users"."username" = ?}
+            @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" WHERE "users"."role" = ? AND "users"."username" = ? ORDER BY "users"."id"}
             @bind_values.should == ["Manager", "Jim"]
           end
 
@@ -50,6 +50,28 @@ describe DataMapper::Adapters::DataObjectsAdapter do
       end
     end
 
+    context "with an ORDER BY clause" do
+      before(:each) do
+        @users = User.by_sql { |u| "SELECT #{u.*} FROM #{u} ORDER BY #{u.username} DESC" }
+        @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+      end
+
+      it "uses the order from the SQL" do
+        @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."username" DESC}
+      end
+    end
+
+    context "with :order specified in the query" do
+      before(:each) do
+        @users = User.by_sql(:order => [:role.desc]) { |u| "SELECT #{u.*} FROM #{u}" }
+        @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+      end
+
+      it "uses the order from the options" do
+        @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."role" DESC}
+      end
+    end
+
     context "with an INNER JOIN" do
       before(:each) do
         @bobs_post  = @bob.posts.create(:title => "Bob can write posts")
@@ -60,7 +82,7 @@ describe DataMapper::Adapters::DataObjectsAdapter do
       end
 
       it "executes the original query" do
-        @sql.should == %q{SELECT "posts"."id", "posts"."title", "posts"."user_id" FROM "posts" INNER JOIN "users" ON "posts"."user_id" = "users"."id" WHERE "users"."id" = ?}
+        @sql.should == %q{SELECT "posts"."id", "posts"."title", "posts"."user_id" FROM "posts" INNER JOIN "users" ON "posts"."user_id" = "users"."id" WHERE "users"."id" = ? ORDER BY "posts"."id"}
         @bind_values.should == [@bob.id]
       end
 
