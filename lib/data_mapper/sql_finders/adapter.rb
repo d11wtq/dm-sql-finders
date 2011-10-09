@@ -69,7 +69,7 @@ module DataMapper
       end
 
       def order_fragment
-        if @parts[:order_by] && @order_by == @model.default_order(@adapter.name) # FIXME: This isn't going to work in the case the user actually override *to* the default
+        if @parts[:order_by] && @order_by.all? { |o| o.kind_of?(::DataMapper::Query::DefaultDirection) }
           @parts[:order_by].strip
         else
           "ORDER BY #{@adapter.send(:order_statement, @order_by, @qualify)}" if @order_by && @order_by.any?

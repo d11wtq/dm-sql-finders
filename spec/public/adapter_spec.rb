@@ -93,6 +93,30 @@ describe DataMapper::Adapters::DataObjectsAdapter do
           @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."role" DESC}
         end
       end
+
+      describe "chaining" do
+        describe "overriding a previous :order option" do
+          before(:each) do
+            @users = User.by_sql(:order => [:role.desc]) { |u| "SELECT #{u.*} FROM #{u}" }.all(:order => [:id.asc])
+            @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+          end
+
+          specify "the last :order specified is used" do
+            @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id"}
+          end
+        end
+
+        describe "overriding the order specified in the SQL" do
+          before(:each) do
+            @users = User.by_sql { |u| "SELECT #{u.*} FROM #{u} ORDER BY #{u.role} DESC" }.all(:order => [:id.asc])
+            @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+          end
+
+          specify "the last :order specified is used" do
+            @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id"}
+          end
+        end
+      end
     end
 
     context "with an INNER JOIN" do
