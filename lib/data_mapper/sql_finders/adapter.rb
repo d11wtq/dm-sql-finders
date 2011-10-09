@@ -11,6 +11,8 @@ module DataMapper
         @qualify                      = @query.links.any? || !@parts[:from].nil?
         @conditions_stmt, @qry_values = @adapter.send(:conditions_statement, @conditions, @qualify)
         @order_by                     = @query.order
+        @limit                        = @query.limit
+        @offset                       = @query.offset
         @bind_values                  = @sql_values + @qry_values
         @group_by = if @query.unique?
           @fields.select { |property| property.kind_of?(Property) }
@@ -26,6 +28,8 @@ module DataMapper
           group_fragment,
           order_fragment
         ].compact.join(" ")
+
+        @adapter.send(:add_limit_offset!, statement, @limit, @offset, @bind_values)
 
         return statement, @bind_values
       end

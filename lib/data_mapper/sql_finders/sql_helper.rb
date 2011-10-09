@@ -8,13 +8,13 @@ module DataMapper
 
         def parse
           tokens = {
-            :select   => "SELECT",
-            :from     => "FROM",
-            :where    => "WHERE",
-            :group_by => "GROUP BY",
-            :having   => "HAVING",
-            :order_by => "ORDER BY",
-            :limit    => "LIMIT"
+            :select       => "SELECT",
+            :from         => "FROM",
+            :where        => "WHERE",
+            :group_by     => "GROUP BY",
+            :having       => "HAVING",
+            :order_by     => "ORDER BY",
+            :limit_offset => "LIMIT"
           }
 
           parts = {}
@@ -23,8 +23,12 @@ module DataMapper
             parts[key] = scan_chunk(initial, tokens.values[(index + 1)..-1])
           end
 
+          parse_limit_offset!(parts)
+
           parts
         end
+
+        private
 
         def scan_chunk(start_token, end_tokens)
           scan_until(end_tokens) if @sql =~ /^\s*#{start_token}\b/i
@@ -61,6 +65,20 @@ module DataMapper
           end
 
           chunk
+        end
+
+        def parse_limit_offset!(parts)
+          return unless fragment = parts[:limit_offset]
+
+          if m = /^\s*LIMIT\s+(\d+)\s*,\s*(\d+)/i.match(fragment)
+            parts[:limit]  = m[2].to_i
+            parts[:offset] = m[1].to_i
+          elsif m = /^\s*LIMIT\s+(\d+)\s+OFFSET\s+(\d+)/i.match(fragment)
+            parts[:limit]  = m[1].to_i
+            parts[:offset] = m[2].to_i
+          elsif m = /^\s*LIMIT\s+(\d+)/i.match(fragment)
+            parts[:limit]  = m[1].to_i
+          end
         end
       end
 

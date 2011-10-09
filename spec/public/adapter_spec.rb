@@ -119,6 +119,142 @@ describe DataMapper::Adapters::DataObjectsAdapter do
       end
     end
 
+    describe "limits" do
+      context "with a limit specified by the SQL" do
+        before(:each) do
+          @users = User.by_sql { |u| "SELECT #{u.*} FROM #{u} LIMIT 1" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "uses the limit from the SQL" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ?}
+          @bind_values.should == [1]
+        end
+
+        it "finds the matching resources" do
+          @users.to_a.should have(1).items
+          @users.to_a.first.should == @bob
+        end
+      end
+
+      context "using bound values in the SQL" do
+        pending
+      end
+
+      context "with a :limit option to #by_sql" do
+        before(:each) do
+          @users = User.by_sql(:limit => 1) { |u| "SELECT #{u.*} FROM #{u}" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "uses the :limit option" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ?}
+          @bind_values.should == [1]
+        end
+
+        it "finds the matching resources" do
+          @users.to_a.should have(1).items
+          @users.to_a.first.should == @bob
+        end
+      end
+
+      context "with both a :limit option and a LIMIT in the SQL" do
+        before(:each) do
+          @users = User.by_sql(:limit => 1) { |u| "SELECT #{u.*} FROM #{u} LIMIT 2" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "the :limit option takes precedence" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ?}
+          @bind_values.should == [1]
+        end
+      end
+
+      context "with an OFFSET in the SQL" do
+        before(:each) do
+          @users = User.by_sql { |u| "SELECT #{u.*} FROM #{u} LIMIT 1 OFFSET 1" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "uses the offset from the SQL" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ? OFFSET ?}
+          @bind_values.should == [1, 1]
+        end
+
+        it "finds the matching resources" do
+          @users.to_a.should have(1).items
+          @users.to_a.first.should == @fred
+        end
+      end
+
+      context "with an argument to LIMIT in the SQL" do
+        before(:each) do
+          @users = User.by_sql { |u| "SELECT #{u.*} FROM #{u} LIMIT 1, 2" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "interprets the offset in the SQL" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ? OFFSET ?}
+          @bind_values.should == [2, 1]
+        end
+      end
+
+      context "with an :offset option to #by_sql" do
+        before(:each) do
+          @users = User.by_sql(:offset => 1) { |u| "SELECT #{u.*} FROM #{u} LIMIT 1" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "uses the offset from the options hash" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ? OFFSET ?}
+          @bind_values.should == [1, 1]
+        end
+
+        it "finds the matching resources" do
+          @users.to_a.should have(1).items
+          @users.to_a.first.should == @fred
+        end
+      end
+
+      context "with both an OFFSET in the SQL and an :offset option" do
+        before(:each) do
+          @users = User.by_sql(:offset => 1) { |u| "SELECT #{u.*} FROM #{u} LIMIT 1 OFFSET 0" }
+          @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+        end
+
+        it "the :offset in the options takes precendence" do
+          @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ? OFFSET ?}
+          @bind_values.should == [1, 1]
+        end
+      end
+
+      describe "chaining" do
+        describe "to override a previous :limit option" do
+          before(:each) do
+            @users = User.by_sql(:limit => 2) { |u| "SELECT #{u.*} FROM #{u}" }.all(:limit => 1)
+            @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+          end
+
+          it "the last :limit option takes precedence" do
+            @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ?}
+            @bind_values.should == [1]
+          end
+        end
+
+        describe "to override a limit applied in SQL" do
+          before(:each) do
+            @users = User.by_sql { |u| "SELECT #{u.*} FROM #{u} LIMIT 1" }.all(:limit => 2)
+            @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
+          end
+
+          it "the last :limit option takes precedence" do
+            @sql.should == %q{SELECT "users"."id", "users"."username", "users"."role" FROM "users" ORDER BY "users"."id" LIMIT ?}
+            @bind_values.should == [2]
+          end
+        end
+      end
+    end
+
     context "with an INNER JOIN" do
       before(:each) do
         @bobs_post  = @bob.posts.create(:title => "Bob can write posts")
