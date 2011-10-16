@@ -277,7 +277,7 @@ describe DataMapper::Adapters::DataObjectsAdapter do
     describe "with virtual attributes" do
       before(:each) do
         @bob.posts.create(:title => "Test")
-        @users = User.by_sql(Post) { |u, p| "SELECT #{u.*}, COUNT(#{p.id}) AS post_count FROM #{u} INNER JOIN #{p} ON #{p.user_id} = #{u.id}" }
+        @users = User.by_sql(Post) { |u, p| "SELECT #{u.*}, COUNT(#{p.id}) AS #{u.post_count} FROM #{u} INNER JOIN #{p} ON #{p.user_id} = #{u.id}" }
       end
 
       it "loads the virtual attributes" do

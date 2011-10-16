@@ -1,6 +1,9 @@
 module DataMapper
   module SQLFinders
-    include SQLHelper
+    def sql(*models)
+      raise ArgumentError, "Block required" unless block_given?
+      yield *TableRepresentation.from_models(*models)
+    end
 
     def by_sql(*additional_models, &block)
       options = if additional_models.last.kind_of?(Hash)
@@ -9,8 +12,8 @@ module DataMapper
         {}
       end
 
-      sql, *bind_values = sql_query(self, *additional_models, &block)
-      parts = sql_parts(sql)
+      sql, *bind_values = sql(self, *additional_models, &block)
+      parts = SQLParser.new(sql).parse
 
       options[:limit]  ||= parts[:limit]  if parts[:limit]
       options[:offset] ||= parts[:offset] if parts[:offset]

@@ -1,0 +1,7 @@
+module DataMapper
+  module SQLFinders
+    module SQLHelper
+
+    end
+  end
+end
