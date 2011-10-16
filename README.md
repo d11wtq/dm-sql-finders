@@ -159,7 +159,7 @@ def self.penultimate_five
 end
 ```
 
-Order they can be provided as options to `#by_sql`:
+Or they can be provided as options to `#by_sql`:
 
 ``` ruby
 def self.penultimate_five
@@ -172,8 +172,7 @@ If `:limit` and/or `:offset` are passed to `#by_sql`, they take precedence over 
 ### Method chaining
 
 Method chaining with `#by_sql`, for the most part, works just like with `#all`.  There are some current limitations,
-such as overriding `:links` (i.e. changing the JOIN condition in the SQL) and reversing the order of a query that
-used `ORDER BY` in the SQL, rather than via an `:order` option.
+such as reversing the order of a query that used `ORDER BY` in the SQL, rather than via an `:order` option.
 
 Also note the you may not currently chain `#by_sql` calls together.  `#by_sql` must, logically, always be the first
 call in the chain.
@@ -219,7 +218,6 @@ dm-aggregates and dm-pager) still function without caring that raw SQL is being 
 ## TODO
 
   - Support overriding `:fields` in a `#by_sql` query (complex if the query depends on RDBMS native functions)
-  - Handle `:links` chained onto a `#by_sql` query
   - Reverse the order when invoking `#reverse` in a `#by_sql` query that used `ORDER BY` in the SQL (note this will work just fine if
     you use the `:order` option)
   - Better support for `?` replacements in places other than the `WHERE` clause
