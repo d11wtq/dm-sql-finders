@@ -22,7 +22,7 @@ Gem::Specification.new do |s|
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 
-  DM_VERSION ||= "~> 1.2.0.rc2"
+  DM_VERSION ||= "~> 1.2.0"
 
   s.add_runtime_dependency "dm-core",               DM_VERSION
   s.add_runtime_dependency "dm-do-adapter",         DM_VERSION

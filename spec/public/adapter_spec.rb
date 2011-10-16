@@ -137,10 +137,6 @@ describe DataMapper::Adapters::DataObjectsAdapter do
         end
       end
 
-      context "using bound values in the SQL" do
-        pending
-      end
-
       context "with a :limit option to #by_sql" do
         before(:each) do
           @users = User.by_sql(:limit => 1) { |u| "SELECT #{u.*} FROM #{u}" }
@@ -275,6 +271,17 @@ describe DataMapper::Adapters::DataObjectsAdapter do
 
       it "does not find incorrect resources" do
         @posts.should_not include(@freds_post)
+      end
+    end
+
+    describe "with virtual attributes" do
+      before(:each) do
+        @bob.posts.create(:title => "Test")
+        @users = User.by_sql(Post) { |u, p| "SELECT #{u.*}, COUNT(#{p.id}) AS post_count FROM #{u} INNER JOIN #{p} ON #{p.user_id} = #{u.id}" }
+      end
+
+      it "loads the virtual attributes" do
+        @users.to_a.first.post_count.should == 1
       end
     end
   end

@@ -11,6 +11,25 @@ module DataMapper
         @sql_values ||= []
         return @sql_parts, @sql_values
       end
+
+      def fields_with_sql
+        return fields_without_sql unless @sql_parts && @sql_parts[:fields]
+
+        @sql_parts[:fields].map do |field|
+          if property = model.properties.detect { |p| p.field == field }
+            property
+          else
+            DataMapper::Property::String.new(model, field)
+          end
+        end
+      end
+
+      def self.included(base)
+        base.instance_eval do
+          alias_method :fields_without_sql, :fields
+          alias_method :fields, :fields_with_sql
+        end
+      end
     end
   end
 
@@ -23,8 +42,7 @@ module DataMapper
   class Query
     class DefaultDirection < Direction; end
 
-    # Temporary monkey patch for https://github.com/datamapper/dm-core/pull/150
-    def normalize_order
+    def normalize_order # temporary (will be removed in DM 1.3)
       return if @order.nil?
 
       @order = Array(@order)

@@ -15,7 +15,7 @@ module DataMapper
         @offset                       = @query.offset
         @bind_values                  = @sql_values + @qry_values
         @group_by = if @query.unique?
-          @fields.select { |property| property.kind_of?(Property) }
+          @fields.select { |property| property.kind_of?(Property) && @model.properties[property.name] }
         end
       end
 
