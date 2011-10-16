@@ -20,5 +20,9 @@ module DataMapper
 
       Collection.new(Query.new(repository, self, options).tap { |q| q.send(:sql=, parts, bind_values) })
     end
+
+    def default_order(repository_name = default_repository_name)
+      Array(super).map { |d| Query::DefaultDirection.new(d) }.freeze
+    end
   end
 end

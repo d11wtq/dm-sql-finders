@@ -1,3 +1,5 @@
+require "forwardable"
+
 module DataMapper
   module SQLFinders
     class Query < DataMapper::Query
@@ -13,7 +15,7 @@ module DataMapper
       end
 
       def fields
-        return super unless @sql_parts && @sql_parts[:fields]
+        return super unless @sql_parts && @sql_parts.has_key?(:fields)
 
         @sql_parts[:fields].map do |field|
           if property = model.properties.detect { |p| p.field == field }
@@ -24,13 +26,15 @@ module DataMapper
         end
       end
 
-      class DefaultDirection < Direction; end
-    end
-  end
+      class DefaultDirection < Direction
+        extend Forwardable
 
-  module Model
-    def default_order(repository_name = default_repository_name)
-      @default_order[repository_name] ||= key(repository_name).map { |property| SQLFinders::Query::DefaultDirection.new(property) }.freeze
+        def_delegators :@delegate, :target, :operator, :reverse!, :get
+
+        def initialize(delegate)
+          @delegate = delegate
+        end
+      end
     end
   end
 
