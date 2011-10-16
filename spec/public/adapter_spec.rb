@@ -274,6 +274,14 @@ describe DataMapper::Adapters::DataObjectsAdapter do
       end
 
       context "to the same table" do
+        before(:each) do
+          @posts = Post.by_sql(Post) { |p1, p2| "SELECT #{p1.*} FROM #{p1} INNER JOIN #{p2} ON #{p1.id} = #{p2.id}" }
+          @sql, @bind_values = Post.repository.adapter.send(:select_statement, @posts.query)
+        end
+
+        it "creates alises for the subsequent tables" do
+          @sql.should == %q{SELECT "posts"."id", "posts"."title", "posts"."user_id" FROM "posts" INNER JOIN "posts" AS "posts_1" ON "posts"."id" = "posts_1"."id" ORDER BY "posts"."id"}
+        end
       end
     end
 

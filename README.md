@@ -1,14 +1,11 @@
 # DataMapper SQL Finders
 
-[NOTICE: This README is stub.  This gem is not actually finished.]
-
 DataMapper SQL Finders adds `#by_sql` to your models, as a compliment to the standard pure-ruby
 query system used by DataMapper.  The SQL you write will be executed directly against the adapter,
 but you do not need to lose the benefit of the field and table name abstraction offered by DM.
 When you invoke `#by_sql`, one or more table representations are yielded into a block, which you
 provide.  These objects are interpolated into your SQL, such that you use DataMapper properties in
-the SQL and make no direct reference to the real field names in the database schema.  This is in
-stark contrast to ActiveRecord, which couples your Ruby code very closely to your database schema.
+the SQL and make no direct reference to the real field names in the database schema.
 
 I wrote this gem because my original reason for using DataMapper was that I needed to work with a
 large, existing database schema belonging to an old PHP application, subsequently ported to Rails.
@@ -64,11 +61,23 @@ You may chain regular DataMapper finders onto the result (the original SQL is mo
 User.never_posted.all(:username.like => "%bob%")
 ```
 
+## A note about DataMapper 2.0
+
+The DataMapper guys are hard at work creating DataMapper 2.0, which involves a lot of under-the-surface changes, most
+notably building DM's query interface atop [Veritas](https://github.com/dkubb/veritas), with the adapter layer generating
+SQL by walking a Veritas relation (an AST - abstract syntax tree).  Because of the way DM 1 handles queries, it is not
+trivial to support SQL provided by the user (except for the trival case of it being in the WHERE clause).  With any hope,
+gems like this will either not be needed in DM 2.0, or at least will be easy to implement cleanly.
+
 ## Installation
 
-As of now, the gem is under development (started 7th October 2011).  I anticipate a first release will be ready within
-a week or so.  It is a very simple concept, adding some decorations to `Query` and `DataObjectsAdapter`, but there are
-still some big problems to solve and lots of specs to write.
+Via rubygems:
+
+    gem install dm-sql-finders
+
+Note that while the gem is functional, it has several known limitations, which I aim to work about by improving the
+parsing and generating logic.  It is unlikely you will hit the limitations unless you extensively use `#by_sql` in
+conjunction with options such as `:links`.
 
 ## Detailed Usage
 
@@ -77,7 +86,7 @@ are encouraged to.  They respond to the following methods:
 
   - `tbl.*`: expands the splat to only the known fields defined in your model. Other fields in the database are excluded.
   - `tbl.to_s`: represents the name of the table in the database.  `#to_s` is invoked implcitly in String context. Note
-     that if you join to the same table multiple times, DataMapper SQL Finders will alias them accordingly (TODO).
+     that if you join to the same table multiple times, DataMapper SQL Finders will alias them accordingly.
   - `tbl.property_name`: represents the field name in the database mapping to `property_name` in your model.
 
 Writing the field/table names directly, while it will work, is not advised, since it will significantly hamper any future
@@ -162,18 +171,59 @@ If `:limit` and/or `:offset` are passed to `#by_sql`, they take precedence over 
 
 ### Method chaining
 
-Method chaining with `#by_sql` works just like with `#all`.  The only (current) exception is that the `#by_sql` call must be the first
-in the chain (I'm not sure how it would look, semantically, if a `#by_sql` call was made anywhere but at the start).
+Method chaining with `#by_sql`, for the most part, works just like with `#all`.  There are some current limitations,
+such as overriding `:links` (i.e. changing the JOIN condition in the SQL) and reversing the order of a query that
+used `ORDER BY` in the SQL, rather than via an `:order` option.
+
+Also note the you may not currently chain `#by_sql` calls together.  `#by_sql` must, logically, always be the first
+call in the chain.
 
 ``` ruby
 User.by_sql{ |u| ["SELECT #{u.*} FROM #{u} WHERE #{u.role} = ?", "Manager"] }.all(:username.like => "%bob%", :order => [:username.desc])
 ```
+
+### Unions, Intersections and Differences
+
+Unfortunately this is not currently supported, and will likely only be added after the other limitations are worked out.
+
+Specifically, queries like this:
+
+``` ruby
+User.by_sql { |u| ["SELECT #{u.*} FROM #{u} WHERE #{u.created_at} < ?", Date.today - 365] } | User.all(:admin => true)
+```
+
+Should really produce SQL of the nature:
+
+``` sql
+SELECT "users"."id", "users"."username", "users"."admin" FROM "users" WHERE ("created_at" < ?) OR (admin = TRUE)
+```
+
+I have no idea what will happen if it is attempted, but it almost certainly will not work ;)
+
+## Will it interfere with DataMapper?
+
+Almost all of the implementation is unintrusive, but unfortunately, because DataMapper's DataObjects Adapter does not provide
+a great deal of flexibility when it comes to SQL generation, the entire `#select_statement` method has been overridden.  For
+non-`#by_sql` queries everything follows the original code pathways, and during a `#by_sql` query, the SQL is re-built using
+a combination of the original logic and some custom logic to include your SQL.  In short, yes, it does interfere, but I don't
+believe there are any alternatives without extensive work on DataMapper's Query interface and the DataObjects adapter itself.
+
+DataMapper 2.0 *should* fix this.
 
 ## Contributors
 
 DataMapper SQL Finders is currently written by Chris Corbyn, but I'm extremely open to contributors which can make the
 extension feel as natural and robust as possible.  It should be developed such that other DataMapper gems (such as
 dm-aggregates and dm-pager) still function without caring that raw SQL is being used in the queries.
+
+## TODO
+
+  - Support overriding `:fields` in a `#by_sql` query (complex if the query depends on RDBMS native functions)
+  - Handle `:links` chained onto a `#by_sql` query
+  - Reverse the order when invoking `#reverse` in a `#by_sql` query that used `ORDER BY` in the SQL (note this will work just fine if
+    you use the `:order` option)
+  - Better support for `?` replacements in places other than the `WHERE` clause
+  - Support set operations (union, intersection, difference)
 
 ## Future Plans
 
