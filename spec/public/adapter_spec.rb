@@ -272,6 +272,9 @@ describe DataMapper::Adapters::DataObjectsAdapter do
       it "does not find incorrect resources" do
         @posts.should_not include(@freds_post)
       end
+
+      context "to the same table" do
+      end
     end
 
     describe "with virtual attributes" do

@@ -5,7 +5,7 @@ module DataMapper
         @adapter                      = adapter
         @query                        = query
         @model                        = @query.model
-        @parts, @sql_values           = @query.sql
+        @parts, @sql_values           = @query.respond_to?(:sql) ? @query.sql : [{}, []]
         @fields                       = @query.fields
         @conditions                   = @query.conditions
         @qualify                      = @query.links.any? || !@parts[:from].nil?
