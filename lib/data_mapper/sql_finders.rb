@@ -15,7 +15,7 @@ module DataMapper
       options[:limit]  ||= parts[:limit]  if parts[:limit]
       options[:offset] ||= parts[:offset] if parts[:offset]
 
-      Collection.new(::DataMapper::Query.new(repository, self, options).tap { |q| q.send(:sql=, parts, bind_values) })
+      Collection.new(Query.new(repository, self, options).tap { |q| q.send(:sql=, parts, bind_values) })
     end
   end
 end

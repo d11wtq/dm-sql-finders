@@ -1,5 +1,6 @@
 require "dm-core"
 require "dm-do-adapter"
+require "data_mapper/sql_finders/sql_builder"
 require "data_mapper/sql_finders/adapter"
 require "data_mapper/sql_finders/query"
 require "data_mapper/sql_finders/sql_helper"

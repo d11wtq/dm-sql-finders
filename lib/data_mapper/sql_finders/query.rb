@@ -1,6 +1,6 @@
 module DataMapper
   module SQLFinders
-    module Query
+    class Query < DataMapper::Query
       def sql=(parts, bind_values)
         @sql_parts  = parts
         @sql_values = bind_values
@@ -12,8 +12,8 @@ module DataMapper
         return @sql_parts, @sql_values
       end
 
-      def fields_with_sql
-        return fields_without_sql unless @sql_parts && @sql_parts[:fields]
+      def fields
+        return super unless @sql_parts && @sql_parts[:fields]
 
         @sql_parts[:fields].map do |field|
           if property = model.properties.detect { |p| p.field == field }
@@ -24,24 +24,17 @@ module DataMapper
         end
       end
 
-      def self.included(base)
-        base.instance_eval do
-          alias_method :fields_without_sql, :fields
-          alias_method :fields, :fields_with_sql
-        end
-      end
+      class DefaultDirection < Direction; end
     end
   end
 
   module Model
     def default_order(repository_name = default_repository_name)
-      @default_order[repository_name] ||= key(repository_name).map { |property| Query::DefaultDirection.new(property) }.freeze
+      @default_order[repository_name] ||= key(repository_name).map { |property| SQLFinders::Query::DefaultDirection.new(property) }.freeze
     end
   end
 
   class Query
-    class DefaultDirection < Direction; end
-
     def normalize_order # temporary (will be removed in DM 1.3)
       return if @order.nil?
 
@@ -65,11 +58,8 @@ module DataMapper
 
           when Path
             Direction.new(order.property)
-
         end
       end
     end
   end
-
-  Query.send(:include, SQLFinders::Query)
 end
