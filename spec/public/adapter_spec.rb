@@ -1,12 +1,26 @@
 require "spec_helper"
 
 describe DataMapper::Adapters::DataObjectsAdapter do
-  context "querying by SQL" do
+  before(:each) do
+    @bob  = User.create(:username => "Bob",  :role => "Manager")
+    @fred = User.create(:username => "Fred", :role => "Tea Boy")
+  end
+
+  context "query without SQL" do
     before(:each) do
-      @bob  = User.create(:username => "Bob",  :role => "Manager")
-      @fred = User.create(:username => "Fred", :role => "Tea Boy")
+      @users = User.all(:username => "Bob")
+      @sql, @bind_values = User.repository.adapter.send(:select_statement, @users.query)
     end
 
+    it "behaves unchanged" do
+      @users.to_a.count.should == 1
+      @users.to_a.first.should == @bob
+      @sql.should == %{SELECT "id", "username", "role" FROM "users" WHERE "username" = ? ORDER BY "id"}
+      @bind_values.should == ["Bob"]
+    end
+  end
+
+  context "querying by SQL" do
     context "with a basic SELECT statement" do
       before(:each) do
         @users = User.by_sql { |u| ["SELECT #{u.*} FROM #{u} WHERE #{u.role} = ?", "Manager"] }

@@ -20,6 +20,8 @@ module DataMapper
       end
 
       def select_statement
+        return @adapter.send(:select_statement_without_query, @query) unless @query.kind_of?(SQLFinders::Query)
+
         statement = [
           columns_fragment,
           from_fragment,
