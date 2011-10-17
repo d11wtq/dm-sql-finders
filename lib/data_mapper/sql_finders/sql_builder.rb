@@ -37,7 +37,7 @@ module DataMapper
       private
 
       def columns_fragment
-        if @parts[:select]
+        if @parts[:select] && @fields.none? { |f| f.kind_of?(DataMapper::Query::Operator) }
           @parts[:select].strip
         else
           "SELECT #{@adapter.send(:columns_statement, @fields, @qualify)}"

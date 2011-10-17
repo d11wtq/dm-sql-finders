@@ -15,6 +15,7 @@ module DataMapper
       end
 
       def fields
+        return super if super.any? { |f| f.kind_of?(Operator) }
         return super unless @sql_parts && @sql_parts.has_key?(:fields)
 
         @sql_parts[:fields].map do |field|

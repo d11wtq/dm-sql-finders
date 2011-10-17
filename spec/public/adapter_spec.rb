@@ -285,6 +285,16 @@ describe DataMapper::Adapters::DataObjectsAdapter do
       end
     end
 
+    describe "aggregate queries" do
+      it "supports calculating counts" do
+        User.by_sql { |u| "SELECT #{u.*} FROM #{u}" }.count(:id).should == 2
+      end
+
+      it "supports multiple aggregates" do
+        User.by_sql { |u| "SELECT #{u.*} FROM #{u}" }.aggregate(:id.count, :id.min, :username.max).should == [2, 1, "Fred"]
+      end
+    end
+
     describe "with virtual attributes" do
       before(:each) do
         @bob.posts.create(:title => "Test")

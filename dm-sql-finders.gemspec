@@ -22,12 +22,13 @@ Gem::Specification.new do |s|
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 
-  DM_VERSION ||= "~> 1.2.0"
+  DM_VERSION ||= ">= 1.2.0"
 
   s.add_runtime_dependency "dm-core",               DM_VERSION
   s.add_runtime_dependency "dm-do-adapter",         DM_VERSION
 
   s.add_development_dependency "rspec",             "~> 2.6"
   s.add_development_dependency "dm-migrations",     DM_VERSION
+  s.add_development_dependency "dm-aggregates",     DM_VERSION
   s.add_development_dependency "dm-sqlite-adapter", DM_VERSION
 end

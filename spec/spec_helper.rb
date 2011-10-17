@@ -1,4 +1,5 @@
 require "dm-migrations"
+require "dm-aggregates"
 require "dm-sql-finders"
 
 DataMapper.setup(:default, "sqlite::memory:")
