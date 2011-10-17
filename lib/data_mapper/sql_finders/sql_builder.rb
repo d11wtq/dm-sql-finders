@@ -73,7 +73,7 @@ module DataMapper
       end
 
       def order_fragment
-        if @parts[:order_by] && @order_by.all? { |o| o.kind_of?(Query::DefaultDirection) }
+        if @parts[:order_by] && (@order_by.nil? || @order_by.all? { |o| o.kind_of?(Query::DefaultDirection) })
           @parts[:order_by].strip
         else
           "ORDER BY #{@adapter.send(:order_statement, @order_by, @qualify)}" if @order_by && @order_by.any?
