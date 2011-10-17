@@ -75,10 +75,6 @@ Via rubygems:
 
     gem install dm-sql-finders
 
-Note that while the gem is functional, it has several known limitations, which I aim to work about by improving the
-parsing and generating logic.  It is unlikely you will hit the limitations unless you extensively use `#by_sql` in
-conjunction with options such as `:links`.
-
 ## Detailed Usage
 
 Note that in the following examples, you are not forced to use the table representations yielded into the block, but you
@@ -111,6 +107,34 @@ def self.created_after(time)
   by_sql { |m| ["SELECT #{m.*} FROM #{m} WHERE #{m.created_at} > ?", time] }
 end
 ```
+
+### Selecting less than all fields
+
+Just specify individual fields in the SQL.  The regular DM semantics apply (i.e. the rest will be lazy loaded, and omitting the
+primary key means your records are immutable).
+
+``` ruby
+def self.usernames_only
+  by_sql { |u| "SELECT #{u.username} FROM #{u}" }
+end
+```
+
+### Selecting *more* than all fields (experimental)
+
+This allows you to pre-load things like aggregate calculations you may otherwise add denormalizations for:
+
+``` ruby
+def self.with_post_counts
+  by_sql(Post) { |u, p| "SELECT #{u.*}, COUNT(#{p.id}) AS post_count FROM #{u} INNER JOIN #{p} ON #{p.user_id} = #{u.id} GROUP BY #{u.id}" }
+end
+```
+
+A `@post_count` instnace variable is set on all resources.  Currently this is always a String.  You will need to typecast manually.
+
+See the section on "Joins" for details on the join syntax.
+
+You should consider this feature experimental.  It takes advantage of the fact DM Property instances can be created and thrown-away
+on-the-fly.
 
 ### Ordering
 
@@ -201,27 +225,33 @@ I have no idea what will happen if it is attempted, but it almost certainly will
 
 ## Will it interfere with DataMapper?
 
-Almost all of the implementation is unintrusive, but unfortunately, because DataMapper's DataObjects Adapter does not provide
-a great deal of flexibility when it comes to SQL generation, the entire `#select_statement` method has been overridden.  For
-non-`#by_sql` queries everything follows the original code pathways, and during a `#by_sql` query, the SQL is re-built using
-a combination of the original logic and some custom logic to include your SQL.  In short, yes, it does interfere, but I don't
-believe there are any alternatives without extensive work on DataMapper's Query interface and the DataObjects adapter itself.
+`#select_statement` on the adapter is overridden such that, when you use `#by_sql` query, code in the gem is executed, and
+when you execute a regular query, the original code pathways are followed.  I'd prefer some sort of extension API in
+DataObjectsAdapter to allow hooks into its SQL generation logic, but for now, this is how it works.
 
 DataMapper 2.0 *should* fix this.
 
 ## Contributors
 
-DataMapper SQL Finders is currently written by Chris Corbyn, but I'm extremely open to contributors which can make the
-extension feel as natural and robust as possible.  It should be developed such that other DataMapper gems (such as
-dm-aggregates and dm-pager) still function without caring that raw SQL is being used in the queries.
+DataMapper SQL Finders is currently written by [Chris Corbyn](https://github.com/d11wtq)
+
+Contributions are more than gladly accepted.  The primary goal is to support SQL in a way that does not break gems like dm-aggregates
+and dm-pager.  The more the SQL can be interpreted and turned into a native Query, the better.
 
 ## TODO
 
-  - Support overriding `:fields` in a `#by_sql` query (complex if the query depends on RDBMS native functions)
+There are some known limitations, that are mostly edge-cases.  You will only run into them if you try to get too crazy combining regular
+DM queries with SQL (e.g. adding `:links` to a hand-written SQL query works, unless you have used bind values somewhere other than the
+WHERE clause *and if*, and *only if* DataMapper needs to use a bind value in the join, such as for special join conditions).  Real
+edge-cases.
+
+  - Support overriding `:fields` in a `#by_sql` query (complex if the query depends on RDBMS native functions in both the WHERE and the SELECT)
   - Reverse the order when invoking `#reverse` in a `#by_sql` query that used `ORDER BY` in the SQL (note this will work just fine if
     you use the `:order` option)
   - Better support for `?` replacements in places other than the `WHERE` clause
   - Support set operations (union, intersection, difference)
+  - Possibly (?) support crazy complex mass-updates (seems a little DB-specific though):
+    `User.by_sql { ... something with join conditions ... }.update!(:banned => true)` (MySQL, for one, can do `UPDATE ... INNER JOIN ...`)
 
 ## Future Plans
 
@@ -233,7 +263,7 @@ therefore allowing you to simplify the query and let DMQL hande things like JOIN
 Post.by_dmql("JOIN User u WHERE u.username = ?", "Bob")
 ```
 
-Which would INNER JOIN posts with users and map u.username with the real field name of the `User#username` property.
+Which would INNER JOIN posts with users and map `u.username` with the real field name of the `User#username` property.
 
 This gem would be a pre-requisite for that.
 
