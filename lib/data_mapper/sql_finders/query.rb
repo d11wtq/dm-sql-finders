@@ -35,6 +35,10 @@ module DataMapper
         def initialize(delegate)
           @delegate = delegate
         end
+
+        def dup
+          self.class.new(@delegate.dup)
+        end
       end
     end
   end

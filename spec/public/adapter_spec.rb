@@ -319,5 +319,13 @@ describe DataMapper::Adapters::DataObjectsAdapter do
         @users.to_a.first.post_count.should == 1
       end
     end
+
+    # fixed an obscure bug with state leakage here
+    describe "#reverse!" do
+      it "is consistent between invocations" do
+        User.all.query.reverse.order.first.operator.should == :desc
+        User.all.query.reverse.order.first.operator.should == :desc
+      end
+    end
   end
 end

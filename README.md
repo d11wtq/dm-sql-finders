@@ -67,7 +67,8 @@ The DataMapper guys are hard at work creating DataMapper 2.0, which involves a l
 notably building DM's query interface atop [Veritas](https://github.com/dkubb/veritas), with the adapter layer generating
 SQL by walking a Veritas relation (an AST - abstract syntax tree).  Because of the way DM 1 handles queries, it is not
 trivial to support SQL provided by the user (except for the trival case of it being in the WHERE clause).  With any hope,
-gems like this will either not be needed in DM 2.0, or at least will be easy to implement cleanly.
+gems like this will either not be needed in DM 2.0, or at least will be easy to implement cleanly, since SQL and Veritas
+play nicely with each other.
 
 ## Installation
 
@@ -86,7 +87,7 @@ are encouraged to.  They respond to the following methods:
   - `tbl.property_name`: represents the field name in the database mapping to `property_name` in your model.
 
 Writing the field/table names directly, while it will work, is not advised, since it will significantly hamper any future
-efforts to chain onto the query (and it reads just like SQL, right?).
+efforts to chain onto the query (and it reads just like SQL anyway, right?).
 
 ### Basic SELECT statements
 
